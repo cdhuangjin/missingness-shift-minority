@@ -1,0 +1,90 @@
+seeds:
+  - 42
+  - 52
+  - 62
+
+models:
+  - xgboost
+  - logistic_regression
+
+# Logical splits: train / validation / test (fractions of the dataset).
+split:
+  train: 0.60
+  validation: 0.20
+  test: 0.20
+
+data:
+  # Each dataset is a public, independent UCI source with zero/negligible
+  # natural missingness so the artificial missingness protocol is not masked.
+  datasets:
+    - name: default_credit_card
+      source: uci
+      uci_id: 350
+      target: Y
+      positive_class: 1
+      subset_fraction: 1.0
+    - name: bank_additional
+      source: uci_zip
+      zip_url: "https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank-additional.zip"
+      csv_in_zip: bank-additional-full.csv
+      separator: ";"
+      target: y
+      positive_class: "yes"
+      subset_fraction: 1.0
+    - name: htr2
+      source: uci
+      uci_id: 372
+      target: class
+      positive_class: 1
+      subset_fraction: 1.0
+
+source_missingness:
+  mechanism: mcar
+  rate: 0.05
+
+target_environments:
+  iid_mcar:
+    mechanism: mcar
+    rate: 0.05
+  mild_mcar:
+    mechanism: mcar
+    rate: 0.10
+  severe_mcar:
+    mechanism: mcar
+    rate: 0.30
+  mar_like:
+    mechanism: feature_dependent
+    target_rate: 0.20
+    driver_scale: 2.0
+  class_conditional:
+    mechanism: class_conditional
+    minority_rate: 0.30
+    majority_rate: 0.10
+
+features:
+  max_affected: 5
+  rank_method: mutual_information
+
+pipelines:
+  # Main matrix: P0 for every model; P1 (missingness indicator) for xgboost.
+  p0_models: [xgboost, logistic_regression]
+  p1_models: [xgboost]
+  indicator_for: topk_numeric
+
+thresholds:
+  epsilon: 1.0e-12
+
+gate:
+  strong_mvg: 0.10
+  moderate_mvg: 0.05
+  strong_recall_drop: 0.10
+  stable_auroc_drop: 0.03
+  slope_ratio: 1.5
+  min_seed_consistency: 2
+  min_datasets: 2
+  max_num_datasets: 3
+
+paths:
+  raw_data: data/raw
+  processed_data: data/processed
+  results: results/gate_a

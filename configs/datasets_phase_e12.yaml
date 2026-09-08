@@ -1,0 +1,58 @@
+# Frozen Phase E1/E2 dataset list.
+# Decision made before any experiment ran. Replacement policy (per §7 of the
+# Phase E1/E2 prompt): only removed if a dataset cannot be downloaded reliably,
+# is not a true binary classification problem, has label errors/corruption, or
+# has natural missingness that conflicts with the protocol.
+#
+# Replacements made (documented in results/phase_e12/dataset_exclusion_log.md):
+# - credit_card_fraud: no automated no-auth stable source (Kaggle auth required);
+#   replaced by the public extreme-imbalance UCI "Polish bankruptcy" (id 365).
+# - mammography: UCI id 165 exposes a non-binary/continuous target via the
+#   registry, so it is not a valid binary benchmark here; replaced by ozone
+#   (id 172), another public extreme-imbalance binary set.
+
+frozen_at: "2026-09-07T16:20:00"
+
+datasets:
+  - name: default_credit_card
+    source: uci
+    uci_id: 350
+    target: "__target__"
+    drop_cols: []
+  - name: bank_additional
+    source: uci_zip
+    zip_url: "https://archive.ics.uci.edu/ml/machine-learning-databases/00222/bank-additional.zip"
+    csv_in_zip: bank-additional-full.csv
+    separator: ";"
+    target: y
+    drop_cols: []
+  - name: htr2
+    source: uci
+    uci_id: 372
+    target: "__target__"
+    drop_cols: []
+  - name: spambase
+    source: uci
+    uci_id: 94
+    target: "__target__"
+    drop_cols: []
+  - name: breast_cancer_wisconsin_diagnostic
+    source: uci
+    uci_id: 17
+    target: "__target__"
+    drop_cols: []
+  - name: magic_gamma_telescope
+    source: uci
+    uci_id: 159
+    target: "__target__"
+    drop_cols: []
+  - name: bankruptcy
+    source: uci
+    uci_id: 365
+    target: "__target__"
+    drop_cols: [year]
+  - name: ozone
+    source: uci
+    uci_id: 172
+    target: "__target__"
+    drop_cols: []

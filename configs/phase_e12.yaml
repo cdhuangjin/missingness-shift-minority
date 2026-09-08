@@ -1,0 +1,125 @@
+seeds:
+  - 42
+  - 52
+  - 62
+
+models:
+  - logistic_regression
+  - random_forest
+  - xgboost
+  - lightgbm
+
+source_missingness:
+  mechanism: mcar
+  rate: 0.05
+
+mcar_rates:
+  - 0.05
+  - 0.10
+  - 0.20
+  - 0.30
+  - 0.40
+
+mar:
+  weak: 0.10
+  medium: 0.20
+  strong: 0.30
+
+class_conditional:
+  cc20:
+    majority: 0.10
+    minority: 0.20
+  cc30:
+    majority: 0.10
+    minority: 0.30
+  cc40:
+    majority: 0.10
+    minority: 0.40
+  cc50:
+    majority: 0.10
+    minority: 0.50
+
+reverse:
+  reverse30:
+    majority: 0.30
+    minority: 0.10
+  reverse40:
+    majority: 0.40
+    minority: 0.10
+
+block:
+  mild: 0.15
+  severe: 0.30
+
+feature_specific:
+  rates: [0.40, 0.30, 0.20, 0.10]
+
+# Sensitivity feature sets (top is the primary protocol).
+feature_set_sensitivity:
+  top: 1
+  random: 0
+  low: 0
+
+# Which environments each feature-set sensitivity run evaluates.
+feature_set_envs:
+  - mcar_05
+  - mcar_30
+  - cc_30
+  - reverse_cc_30
+
+# Tier 1 core environments.
+core_mechanisms:
+  - mcar_05
+  - mcar_10
+  - mcar_20
+  - mcar_30
+  - mcar_40
+  - mar_medium
+  - cc_30
+  - matched_mcar_cc30
+  - reverse_cc_30
+  - block_severe
+  - feature_specific
+
+# Tier 2 extra mechanisms (evaluated on LR + XGBoost).
+mechanism_expansion:
+  - mar_weak
+  - mar_strong
+  - cc_20
+  - cc_40
+  - cc_50
+  - reverse_cc_40
+  - block_mild
+
+# Tier 3 imputation robustness (representative datasets x 2 models).
+tier3:
+  datasets:
+    - default_credit_card
+    - htr2
+    - bankruptcy
+  models:
+    - logistic_regression
+    - xgboost
+  imputers:
+    - median
+    - knn
+    - iterative
+  pipelines:
+    - p0
+    - p1
+    - native_missing
+  environments:
+    - mcar_05
+    - mcar_30
+    - cc_30
+    - reverse_cc_30
+
+statistics:
+  confidence_level: 0.95
+  bootstrap_iterations: 2000
+  fdr_alpha: 0.05
+
+paths:
+  raw_data: data/raw
+  processed_data: data/processed
+  results: results/phase_e12
