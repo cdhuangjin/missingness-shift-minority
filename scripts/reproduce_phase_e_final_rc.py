@@ -500,8 +500,16 @@ def rc_hidden_thresholds(raw: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]
 
 
 def rc_mamr_negative() -> pd.DataFrame:
-    e3 = json.loads((PROJECT_ROOT / "results" / "phase_e3_mamr" / "method_gate.json").read_text())
-    e3r = json.loads((PROJECT_ROOT / "results" / "phase_e3r_mamr_safety" / "safety_gate.json").read_text())
+    e3_path = PROJECT_ROOT / "results" / "phase_e3_mamr" / "method_gate.json"
+    e3r_path = PROJECT_ROOT / "results" / "phase_e3r_mamr_safety" / "safety_gate.json"
+    if not (e3_path.exists() and e3r_path.exists()):
+        return pd.DataFrame(
+            [{"method": "N/A (MAMR artifacts absent)", "minority_gain": np.nan,
+              "majority_cost": np.nan, "auprc_delta": np.nan, "big": np.nan,
+              "mgr": np.nan, "mhr": np.nan, "gate_decision": "N/A"}]
+        )
+    e3 = json.loads(e3_path.read_text())
+    e3r = json.loads(e3r_path.read_text())
     em, e3m = e3["metrics"], e3r["metrics"]
     return pd.DataFrame(
         [
@@ -659,7 +667,11 @@ def main() -> int:
     v["RC9_natural_missingness"] = "DESCRIPTIVE"
     v["RC10_imputation"] = "PASS" if imp.loc[imp["config"] != "P0_median", "mean_MVG_recall"].notna().all() and (imp.loc[imp["config"] != "P0_median", "mean_MVG_recall"] > 0).all() else "REVIEW"
     v["RC11_aggregate_masking"] = "QUANTIFIED"
-    v["RC12_mamr_negative"] = "NEGATIVE_RESULT"
+    mamr_artifacts_present = (
+        (PROJECT_ROOT / "results" / "phase_e3_mamr" / "method_gate.json").exists()
+        and (PROJECT_ROOT / "results" / "phase_e3r_mamr_safety" / "safety_gate.json").exists()
+    )
+    v["RC12_mamr_negative"] = "NEGATIVE_RESULT" if mamr_artifacts_present else "N/A"
 
     figures = _figures(ms_detail, lodo, sev, ccep_detail, reverse, outdir / "figures")
     (outdir / "phase_e_final_rc_report.md").write_text(_build_report(v, figures, outdir), encoding="utf-8")
