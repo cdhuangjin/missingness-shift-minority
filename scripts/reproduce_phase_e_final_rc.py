@@ -227,9 +227,12 @@ def _hidden(raw: pd.DataFrame, auroc_th: float = 0.03, recall_th: float = 0.10, 
 
 
 def _pool_stats(sel: pd.DataFrame) -> dict:
-    mir = sel["MiRD_recall"].dropna().to_numpy()
-    mar = sel["MaRD_recall"].dropna().to_numpy()
-    mvgv = sel["MVG_recall"].dropna().to_numpy()
+    mir = sel["MiRD_recall"].to_numpy(dtype=float)
+    mir = mir[np.isfinite(mir)]
+    mar = sel["MaRD_recall"].to_numpy(dtype=float)
+    mar = mar[np.isfinite(mar)]
+    mvgv = sel["MVG_recall"].to_numpy(dtype=float)
+    mvgv = mvgv[np.isfinite(mvgv)]
     if mir.size < 3:
         return {}
     _, p = wilcoxon_paired(mar, mir)
@@ -344,7 +347,8 @@ def rc_severity(raw: pd.DataFrame) -> pd.DataFrame:
 
 def rc_ccep(raw: pd.DataFrame) -> pd.DataFrame:
     ccep = _ccep_cc30(raw)
-    vals = ccep["CCEP_recall"].dropna().to_numpy()
+    vals = ccep["CCEP_recall"].to_numpy(dtype=float)
+    vals = vals[np.isfinite(vals)]
     lo, hi = bootstrap_ci(vals, level=0.95, iters=5000)
     ds_pos = ccep.groupby("dataset")["CCEP_recall"].mean()
     return pd.DataFrame(
@@ -532,16 +536,70 @@ def _figures(ms_detail, lodo, sev, ccep, reverse, outdir) -> list[Path]:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    matplotlib.rcParams.update(
+        {
+            "font.family": "sans-serif",
+            "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
+            "font.size": 8.5,
+            "axes.titlesize": 10,
+            "axes.labelsize": 9,
+            "xtick.labelsize": 7.5,
+            "ytick.labelsize": 7.5,
+            "legend.fontsize": 7.5,
+            "svg.fonttype": "none",
+            "pdf.fonttype": 42,
+            "figure.facecolor": "white",
+            "axes.facecolor": "white",
+        }
+    )
+
     outdir.mkdir(parents=True, exist_ok=True)
     out = []
 
+    # Keep supplementary x-axis labels readable at the journal's single-column
+    # width.  The full dataset identifiers remain in the machine-readable CSVs;
+    # these short labels are only a visual display layer.
+    dataset_labels = {
+        "bank_additional": "Bank marketing",
+        "bankruptcy": "Bankruptcy",
+        "breast_cancer_wisconsin_diagnostic": "Breast cancer",
+        "default_credit_card": "Default credit card",
+        "htr2": "HTRU2",
+        "magic_gamma_telescope": "MAGIC",
+        "ozone": "Ozone",
+        "spambase": "Spambase",
+    }
+
+    def display_dataset_labels(values):
+        return [dataset_labels.get(str(value), str(value)) for value in values]
+
     def save(fig, name):
+        # Submission-quality supplementary figures: combination artwork is
+        # exported at 600 dpi with an opaque white background, then converted
+        # to 8-bit RGB for the journal upload contract.
         p = outdir / name
-        fig.savefig(p, dpi=130, bbox_inches="tight")
+        fig.savefig(p, dpi=600, bbox_inches="tight", facecolor="white", edgecolor="white")
+        fig.savefig(p.with_suffix(".pdf"), bbox_inches="tight", facecolor="white", edgecolor="white")
+        fig.savefig(p.with_suffix(".svg"), bbox_inches="tight", facecolor="white", edgecolor="white")
+        fig.savefig(p.with_suffix(".tiff"), dpi=600, bbox_inches="tight", facecolor="white", edgecolor="white")
+        from PIL import Image
+
+        with Image.open(p.with_suffix(".tiff")) as image:
+            rgb_tiff = image.convert("RGB")
+        rgb_tiff.save(
+            p.with_name(p.stem + "_RGB.tiff"),
+            dpi=(600, 600),
+            compression="tiff_lzw",
+        )
+        rgb_tiff.close()
+        with Image.open(p) as image:
+            rgb_png = image.convert("RGB")
+        rgb_png.save(p, dpi=(600, 600), optimize=True)
+        rgb_png.close()
         plt.close(fig)
         out.append(p)
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
     labels = ["minority_recall", "AUROC", "AUPRC", "balanced_accuracy", "Gmean"]
     vals = [ms_detail["MiRD_recall"].mean()]
     for m in ["AUROC", "AUPRC", "balanced_accuracy", "Gmean"]:
@@ -550,39 +608,62 @@ def _figures(ms_detail, lodo, sev, ccep, reverse, outdir) -> list[Path]:
     ax.set_ylabel("mean relative drop")
     save(fig, "fig_s_rc1_metric_sensitivity.png")
 
-    fig, ax = plt.subplots()
-    ax.bar(lodo["excluded_dataset"], lodo["pooled_mvg_recall"])
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+    ax.errorbar(
+        lodo["excluded_dataset"],
+        lodo["pooled_mvg_recall"],
+        yerr=[lodo["pooled_mvg_recall"] - lodo["mvg_ci_low"], lodo["mvg_ci_high"] - lodo["pooled_mvg_recall"]],
+        fmt="o",
+        color="#20639B",
+        ecolor="#3CAEA3",
+        capsize=2.5,
+    )
     ax.axhline(0, color="k", lw=0.8)
     ax.set_xticks(range(len(lodo)))
-    ax.set_xticklabels(lodo["excluded_dataset"], rotation=45, ha="right")
+    ax.set_xticklabels(
+        display_dataset_labels(lodo["excluded_dataset"]),
+        rotation=45,
+        rotation_mode="anchor",
+        ha="right",
+    )
     ax.set_ylabel("pooled MVG_recall")
     save(fig, "fig_s_rc2_lodo_mvg.png")
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
     ax.bar(sev["scenario"], sev["slope_gap"])
     ax.axhline(0, color="k", lw=0.8)
     ax.set_ylabel("slope gap")
     save(fig, "fig_s_rc3_severity_slope_gap.png")
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
     grp = ccep.groupby("dataset")[["matched_mcar_recall", "cc_recall"]].mean()
     grp = grp.sort_values("matched_mcar_recall")
     x = np.arange(len(grp))
-    ax.bar(x - 0.18, grp["matched_mcar_recall"], 0.34, label="matched MCAR")
-    ax.bar(x + 0.18, grp["cc_recall"], 0.34, label="class-conditional (CC)")
+    ax.bar(x - 0.18, grp["matched_mcar_recall"], 0.34, label="Matched MCAR")
+    ax.bar(x + 0.18, grp["cc_recall"], 0.34, label="Class-conditional (CC)")
     ax.set_xticks(x)
-    ax.set_xticklabels(grp.index, rotation=45, ha="right")
+    ax.set_xticklabels(
+        display_dataset_labels(grp.index),
+        rotation=45,
+        rotation_mode="anchor",
+        ha="right",
+    )
     ax.set_ylabel("minority recall")
     ax.legend()
     save(fig, "fig_s_rc4_matched_mcar_vs_cc.png")
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(7.2, 4.2))
     grp = reverse.groupby("dataset")[["normal_cc_MVG", "reverse_cc_MVG"]].mean().reset_index()
     x = np.arange(len(grp))
-    ax.bar(x - 0.18, grp["normal_cc_MVG"], 0.34, label="normal CC")
-    ax.bar(x + 0.18, grp["reverse_cc_MVG"], 0.34, label="reverse CC")
+    ax.bar(x - 0.18, grp["normal_cc_MVG"], 0.34, label="Normal CC")
+    ax.bar(x + 0.18, grp["reverse_cc_MVG"], 0.34, label="Reverse CC")
     ax.set_xticks(x)
-    ax.set_xticklabels(grp["dataset"], rotation=45, ha="right")
+    ax.set_xticklabels(
+        display_dataset_labels(grp["dataset"]),
+        rotation=45,
+        rotation_mode="anchor",
+        ha="right",
+    )
     ax.set_ylabel("MVG_recall")
     ax.legend()
     save(fig, "fig_s_rc5_normal_vs_reverse_cc.png")

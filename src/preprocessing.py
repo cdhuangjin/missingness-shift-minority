@@ -1,9 +1,10 @@
-"""Splits, feature ranking and source-only imputation.
+"""Splits, feature ranking and source-training imputation.
 
-Leakage contract:
-- ranking uses only the source train (labels from train only);
-- the imputer is fit only on the source train (after source missingness);
-- the same fitted imputer is reused for every target environment.
+The imputer is fit only on the source train (after source missingness) and the
+same fitted imputer is reused for every target environment.  The Phase E1/E2
+runner calls ``rank_numeric_features`` before the per-seed split; therefore the
+runner does not provide a strict source-only feature-ranking guarantee.  That
+executed behavior is disclosed in the manuscript and final-gate audit.
 """
 
 from __future__ import annotations

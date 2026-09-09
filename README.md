@@ -99,9 +99,10 @@ hyperparameters; no per-dataset HPO; no neural / transformer / GAN models.
 
 ## Statistical validation
 
-Wilcoxon signed-rank (primary), paired t-test, rank-biserial and Cohen's dz
-effect sizes, Benjamini-Hochberg FDR, and 95% bootstrap CIs on `MVG`, `CCEP`,
-slopes and the reverse-exposure effect.
+Wilcoxon signed-rank (primary, after aggregation to 96 dataset × model × seed
+blocks), paired t-test, rank-biserial and Cohen's dz effect sizes,
+Benjamini-Hochberg FDR, and 95% block-bootstrap CIs on `MVG`, `CCEP`, slopes
+and the reverse-exposure effect. The 1,296-cell result table is descriptive.
 
 ## Reproduce
 

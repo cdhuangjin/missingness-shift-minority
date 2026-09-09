@@ -210,8 +210,8 @@ def compute_vulnerability(raw) -> pd.DataFrame:
                     "MaRD_f1": maRD_f,
                     "MVG_f1": mvg(miRD_f, maRD_f),
                     "MRR_AUPRC": retention(r["AUPRC"], b["AUPRC"], eps),
-                    "IID_auprc": b["AUPRC"],
-                    "IID_minority_recall": b["minority_recall"],
+                    "REF_auprc": b["AUPRC"],
+                    "REF_minority_recall": b["minority_recall"],
                     "shifted_minority_recall": r["minority_recall"],
                 }
             )
@@ -946,7 +946,7 @@ def build_report(cfg, datasets, raw, vuln, slopes, cc, reverse, hidden, stats,
     lines.append(f"**Paper Gate: `{verdict}`**")
     lines.append("")
     lines.append("Q&A is computed from the primary protocol: `P0` median imputation, "
-                 "`top` predictive feature set, `mcar_05` as the IID reference.")
+                 "`top` predictive feature set, `mcar_05` as the source-like reference.")
     lines.append("")
 
     lines.append("## 1. Scientific Question")
